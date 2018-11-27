@@ -1,4 +1,6 @@
 .vscode/
 .vs/
-*.sln
-*.vcxproj*
+Debug/
+x64/
+
+*vcxproj.user
