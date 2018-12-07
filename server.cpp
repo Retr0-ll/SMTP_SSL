@@ -6,6 +6,10 @@
 #include <iostream>
 #endif
 
+#ifndef _CTIME_
+#include <ctime>
+#endif
+
 
 #pragma comment (lib,"Ws2_32.lib")
 
@@ -26,7 +30,7 @@ void LoadSocket(int major_version, int minor_version)
 
 SmtpServer::SmtpServer(int buffer_size) :listen_socket_(INVALID_SOCKET), buffer_size_(buffer_size), buffer_(NULL)
 {
-	//get log file's name
+	//Get log file's name
 	time_t now_time;
 	struct tm info;
 	char log_fn[30];
@@ -35,7 +39,7 @@ SmtpServer::SmtpServer(int buffer_size) :listen_socket_(INVALID_SOCKET), buffer_
 	localtime_s(&info, &now_time);
 	
 	strftime(log_fn, 30, "Log-%Y%m%d%H%M%S.txt", &info);
-	
+
 	//Initialize buffer
 	buffer_ = new char[buffer_size_];
 	if (buffer_ == NULL)
