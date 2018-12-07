@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef _TIME_
+#include <time.h>
+#endif
+
 #ifndef _SMTP_
 #define SMTP
 #endif
