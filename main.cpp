@@ -1,20 +1,20 @@
+#ifndef _SMTP_
 #include"smtp.h"
-#include<iostream>
+#endif
+
+#ifndef _IOSTREAM_
+#include <iostream>
+#endif
+
+#define BUFFER_SIZE 1024*10 //×Ö½Ú
 
 int main()
 {
-	WSADATA wsadata;
-	WORD socket_version = MAKEWORD(2, 2);
-	int error;
+	LoadSocket(2, 2);
 
-	error = WSAStartup(socket_version, &wsadata);
-	if (error)
-	{
-		std::cout << "WSAStartup failed with error: " << error << std::endl;
-		exit(1);
-	}
-
-	SmtpServer svr(5);
-	svr.Listen(1089);
+	SmtpServer svr(BUFFER_SIZE);
+	svr.Listen(25);
 	svr.Start();
+
+	return 0;
 }
