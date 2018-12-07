@@ -12,6 +12,8 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
 
+#define LOG_FN_F ".\\Log\\Log-%Y%m%d%H%M%S.txt"
+#define LOG_T_F "%m-%d-%H:%M:%S ----- "
 
 #define RB220 "220 localhost\r\n"
 #define RB250 "250 OK\r\n"
@@ -26,6 +28,7 @@
 
 #include<WinSock2.h>
 
+void GetTimeFS(char *output_time, int buffer_size, const char *format);
 
 void LoadSocket(int major_version, int minor_version);
 
@@ -39,7 +42,8 @@ private:
 	int buffer_size_;
 	char* buffer_;
 
-	std::fstream log_file_;
+	std::ofstream log_file_;
+	char log_time_buffer_[30];
 
 public:
 	void Listen(unsigned short listen_port);

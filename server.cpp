@@ -10,8 +10,22 @@
 #include <ctime>
 #endif
 
+#ifndef _FSTREAM_
+#include <fstream>
+#endif
 
 #pragma comment (lib,"Ws2_32.lib")
+
+void GetTimeFS(char *output, int buffer_size, const char * format)
+{
+	time_t now_time;
+	struct tm info;
+
+	time(&now_time);
+	localtime_s(&info, &now_time);
+
+	strftime(output, buffer_size-1, format, &info);
+}
 
 void LoadSocket(int major_version, int minor_version)
 {
@@ -31,14 +45,11 @@ void LoadSocket(int major_version, int minor_version)
 SmtpServer::SmtpServer(int buffer_size) :listen_socket_(INVALID_SOCKET), buffer_size_(buffer_size), buffer_(NULL)
 {
 	//Get log file's name
-	time_t now_time;
-	struct tm info;
 	char log_fn[30];
+	GetTimeFS(log_fn, sizeof(log_fn), LOG_FN_F);
 
-	time(&now_time);
-	localtime_s(&info, &now_time);
-	
-	strftime(log_fn, 30, "Log-%Y%m%d%H%M%S.txt", &info);
+	//Open log file
+	log_file_.open(log_fn);
 
 	//Initialize buffer
 	buffer_ = new char[buffer_size_];
@@ -116,8 +127,12 @@ void SmtpServer::Start()
 		}
 		std::cout << "accepted a connection from " << inet_ntoa(host_addr.sin_addr)
 			<< ":" << ntohs(host_addr.sin_port) << std::endl;
+		GetTimeFS(log_time_buffer_, sizeof(log_time_buffer_), LOG_T_F);
+		log_file_ << log_time_buffer_ << "accepted a connection from " << inet_ntoa(host_addr.sin_addr)
+			<< ":" << ntohs(host_addr.sin_port) << std::endl;
 
 		std::cout << "reply:  " << RB220 << std::endl;
+		log_file_ << log_time_buffer_ << "reply:  " << RB220 << std::endl;
 		send(session_socket, RB220, strlen(RB220), 0);
 
 		HandleCmd(session_socket);
@@ -132,36 +147,44 @@ int SmtpServer::HandleCmd(SOCKET session_socket)
 	//EHLO ----  250 OK
 	data_len = recv(session_socket, buffer_, buffer_size_, 0);
 	buffer_[data_len] = '\0';
+	log_file_ << log_time_buffer_ << buffer_;
 	std::cout << "receive:  " << buffer_;
 
 	pr = RB250;
+	log_file_ << log_time_buffer_ << pr;
 	std::cout << "reply:  " << pr;
 	send(session_socket, pr, strlen(pr), 0);
 
 	//MAIL FROM ------250 OK
 	data_len = recv(session_socket, buffer_, buffer_size_, 0);
 	buffer_[data_len] = '\0';
+	log_file_ << log_time_buffer_ << buffer_;
 	std::cout << "receive:  " << buffer_;
 
 	pr = RB250;
+	log_file_ << log_time_buffer_ << pr;
 	std::cout << "reply:  " << pr;
 	send(session_socket, pr, strlen(pr), 0);
 
 	//RCPT TO -----250 OK
 	data_len = recv(session_socket, buffer_, buffer_size_, 0);
 	buffer_[data_len] = '\0';
+	log_file_ << log_time_buffer_ << buffer_;
 	std::cout << "receive:  " << buffer_;
 
 	pr = RB250;
+	log_file_ << log_time_buffer_ << pr;
 	std::cout << "reply:  " << pr;
 	send(session_socket, pr, strlen(pr), 0);
 
 	//DATA ----- 354 End data with <CR><LF>.<CR><LF>
 	data_len = recv(session_socket, buffer_, buffer_size_, 0);
 	buffer_[data_len] = '\0';
+	log_file_ << log_time_buffer_ << buffer_;
 	std::cout << "receive:  " << buffer_;
 
 	pr = RB354;
+	log_file_ << log_time_buffer_ << pr;
 	std::cout << "reply:  " << pr;
 	send(session_socket, pr, strlen(pr), 0);
 
@@ -184,15 +207,18 @@ int SmtpServer::HandleCmd(SOCKET session_socket)
 	}
 
 	pr = RB250;
+	log_file_ << log_time_buffer_ << pr;
 	std::cout << "reply:  " << pr;
 	send(session_socket, pr, strlen(pr), 0);
 
 	//QUIT ----- 221 Bye
 	data_len = recv(session_socket, buffer_, buffer_size_, 0);
 	buffer_[data_len] = '\0';
+	log_file_ << log_time_buffer_ << buffer_;
 	std::cout << "receive:  " << buffer_;
 
 	pr = RB221;
+	log_file_ << log_time_buffer_ << pr;
 	std::cout << "reply:  " << pr;
 	send(session_socket, pr, strlen(pr), 0);
 	return 0;
@@ -201,6 +227,7 @@ int SmtpServer::HandleCmd(SOCKET session_socket)
 SmtpServer::~SmtpServer()
 {
 	delete[]buffer_;
+	log_file_.close();
 	closesocket(listen_socket_);
 	WSACleanup();
 }

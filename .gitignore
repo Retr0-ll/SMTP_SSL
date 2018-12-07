@@ -2,5 +2,6 @@
 .vs/
 Debug/
 x64/
+Log/
 
 *vcxproj.user
