@@ -27,9 +27,21 @@ void ServerLogic(SmtpServer &svr)
 	//connection established ------- 220
 	svr << RB220;
 
-	//EHLO  --------- 250
+	//EHLO  --------- 250_EXT
 	svr >> svr.buffer_;
-	svr << RB250;
+	svr << RB250_EXT;
+
+	//Auth login ------- 334_User
+	svr >> svr.buffer_;
+	svr << RB334_USER;
+
+	//user ***** -------- 334_pass
+	svr >> svr.buffer_;
+	svr << RB334_PASS;
+
+	// pass ***** --------- 235
+	svr >> svr.buffer_;
+	svr << RB235;
 
 	//MAIL FROM ------- 250
 	len = svr >> svr.buffer_;

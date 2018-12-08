@@ -29,6 +29,10 @@
 * RB[三位回复码] 定义了服务器的响应列表
 */
 #define RB220 "220 localhost\r\n"
+#define RB250_EXT "250-AUTH LOGIN PLAINOK\r\n250-AUTH=LOGIN PLAIN\r\n250-STARTTLS\r\n250 8BITMIME\r\n"
+#define RB334_USER "334 dXNlcm5hbWU6\r\n"
+#define RB334_PASS "334 UGFzc3dvcmQ6\r\n"
+#define RB235 "235 Authentication successful\r\n"
 #define RB250 "250 OK\r\n"
 #define RB354 "354 End data with <CR><LF>.<CR><LF>\r\n"
 #define RB221 "221 Bye\r\n"
