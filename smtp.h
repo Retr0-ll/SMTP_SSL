@@ -9,7 +9,7 @@
 #endif
 
 #ifndef _SMTP_
-#define  SMTP
+#define SMTP
 #endif
 
 #ifndef _FSTREAM_
@@ -60,6 +60,14 @@
 #define GET_PARA(buffer, cmd) (buffer+strlen(cmd))
 
 
+
+
+
+
+
+
+
+
 /********
 * 获取指定格式的时间戳
 * char *output_time 输出参数：带回指定格式的字符串形式时间戳
@@ -69,6 +77,16 @@ void GetTimeStamp(char *output_time, const char *format);
 
 void LoadSocket(int major_version, int minor_version);
 
+
+
+
+
+
+
+
+
+
+
 class SmtpServer
 {
 private:
@@ -77,9 +95,18 @@ private:
 	unsigned short listen_port_;
 	SOCKET listen_socket_;
 	SOCKET session_socket_;
+public:
+	/*********
+	*回调函数类型定义
+	**********/
+	typedef void(*CallBack)(SmtpServer &);
 
 	/*服务器接收缓冲*/
 	char* buffer_;
+
+
+private:
+	/*缓冲大小*/
 	int buffer_size_;
 
 	/*服务器日志 邮件数据文件 时间戳缓冲*/
@@ -87,8 +114,6 @@ private:
 	std::ofstream data_file_;
 	char log_time_buffer_[LOG_T_MAXLEN];
 
-private:
-	int HandleMailData(SOCKET session_socket);
 public:
 	/***********
 	*构造函数打开Log文件、初始化服务器监听套接字、申请服务器缓冲
@@ -102,7 +127,7 @@ public:
 	 *Start  启动服务器并开始接收连接 
 	***********/
 	void Listen(unsigned short listen_port);
-	void Start();
+	void Start(CallBack callback, SmtpServer& svr );
 
 	/*该函数在回调函数中调用，在收到DATA命令后，储存邮件至文件中*/
 	void SaveMailData();
@@ -119,7 +144,7 @@ public:
 	*
 	* << 和 >> 会在标准输出和Log文件中同时记录输入/输入内容
 	***********/
-	friend SmtpServer& operator<<(SmtpServer& server, char *data_send);
+	friend SmtpServer& operator<<(SmtpServer& server, const char *data_send);
 	friend int operator>>(SmtpServer& server, char *data_receive);
 public:
 };

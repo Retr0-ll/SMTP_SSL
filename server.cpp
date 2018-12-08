@@ -22,9 +22,11 @@ void GetTimeStamp(char *output, const char * format)
 	time_t now_time;
 	struct tm info;
 
+	//获取当前时间戳 换算为当地地址 转化成tm 结构
 	time(&now_time);
 	localtime_s(&info, &now_time);
 
+	//按照指定格式输出到 传入缓冲中
 	strftime(output, LOG_T_MAXLEN - 1, format, &info);
 }
 
@@ -44,7 +46,7 @@ void LoadSocket(int major_version, int minor_version)
 }
 
 
-SmtpServer& operator<<(SmtpServer& server, char *data_send)
+SmtpServer& operator<<(SmtpServer& server, const char *data_send)
 {
 	//发送数据
 	send(server.session_socket_, data_send, strlen(data_send), 0);
@@ -60,7 +62,7 @@ SmtpServer& operator<<(SmtpServer& server, char *data_send)
 
 int operator>>(SmtpServer& server, char *data_receive)
 {
-	//接收数据，如果没有数据则阻塞
+	//接收数据，如果没有数据则阻塞挂起
 	int data_len = 0;
 	data_len = recv(server.session_socket_, data_receive, server.buffer_size_, NULL);
 	GetTimeStamp(server.log_time_buffer_, LOG_T_F);
@@ -160,7 +162,7 @@ void SmtpServer::Listen(unsigned short listen_port)
 }
 
 
-void SmtpServer::Start()
+void SmtpServer::Start(CallBack callback, SmtpServer& svr)
 {
 	//客户端地址初始化
 	sockaddr_in host_addr;
@@ -170,7 +172,8 @@ void SmtpServer::Start()
 	while (1)
 	{
 		session_socket_ = INVALID_SOCKET;
-		//接收连接，如果没有连接则挂起
+
+		//接收连接，如果没有连接则阻塞挂起
 		session_socket_ = accept(listen_socket_, (SOCKADDR*)&host_addr, &host_addr_len);
 		GetTimeStamp(log_time_buffer_, LOG_T_F);
 
@@ -189,12 +192,9 @@ void SmtpServer::Start()
 		std::cout << "accepted a connection from " << inet_ntoa(host_addr.sin_addr)
 			<< ":" << ntohs(host_addr.sin_port) << std::endl;
 
-		//建立连接 服务器首先回复220
-		send(session_socket_, RB220, sizeof(RB220), NULL);
 
-		GetTimeStamp(log_time_buffer_, LOG_T_F);
-		log_file_ << log_time_buffer_ << RB220 << std::endl;
-		std::cout << "reply:  " << RB220 << std::endl;
+		//然后调用回调函数开始 SMTP逻辑
+		callback(svr);
 	}
 }
 
@@ -212,8 +212,8 @@ void SmtpServer::SaveMailData()
 		buffer_[data_len] = '\0';
 
 		GetTimeStamp(log_time_buffer_, LOG_T_F);
-		log_file_ << log_time_buffer_ << "receiving data........." << data_count<<std::endl;
-		std::cout << "receiving data........." << std::endl;
+		log_file_ << log_time_buffer_ << "receiving data........." << data_len <<std::endl;
+		std::cout << "receiving data........." << data_len << std::endl;
 
 
 		//检查数据结束标志
@@ -223,7 +223,7 @@ void SmtpServer::SaveMailData()
 			std::cout << "receive:  " << buffer_;
 
 			GetTimeStamp(log_time_buffer_, LOG_T_F);
-			log_file_ << log_time_buffer_ << "finished" << std::endl;
+			log_file_ << log_time_buffer_ << "finished  ....." << data_count << "bytes" << std::endl;
 
 			std::cout << "finished" << std::endl;
 			break;
@@ -231,6 +231,8 @@ void SmtpServer::SaveMailData()
 		data_file_ << buffer_;
 		std::cout << "receive:  " << buffer_;
 	}
+
+	return;
 }
 
 
