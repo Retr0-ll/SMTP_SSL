@@ -40,7 +40,7 @@ void LoadSocket(int major_version, int minor_version)
 	error = WSAStartup(socket_version, &wsadata);
 	if (error)
 	{
-		std::cout << "WSAStartup failed with error: " << error << std::endl;
+		std::cout << "ERROR wsastartup failed with error: " << error << std::endl;
 		exit(1);
 	}
 }
@@ -53,8 +53,8 @@ SmtpServer& operator<<(SmtpServer& server, const char *data_send)
 
 	//记录日志，输出到标准输出
 	GetTimeStamp(server.log_time_buffer_, LOG_T_F);
-	server.log_file_ << server.log_time_buffer_ << "reply:  " << data_send;
-	std::cout << "reply:  " << data_send;
+	server.log_file_ << server.log_time_buffer_ << "INFO reply:  " << data_send;
+	std::cout << "INFO reply:  " << data_send;
 
 	return server;
 }
@@ -69,8 +69,8 @@ int operator>>(SmtpServer& server, char *data_receive)
 
 	//记录日志，输出到标准输出
 	data_receive[data_len] = '\0';
-	server.log_file_ << server.log_time_buffer_ << "receive:  " << data_receive;
-	std::cout << "receive:  " << data_receive;
+	server.log_file_ << server.log_time_buffer_ << "INFO receive:  " << data_receive;
+	std::cout << "INFO receive:  " << data_receive;
 	
 	return data_len;
 }
@@ -90,7 +90,7 @@ SmtpServer::SmtpServer(int buffer_size) :listen_socket_(INVALID_SOCKET), buffer_
 	if (listen_socket_ == INVALID_SOCKET)
 	{
 		GetTimeStamp(log_time_buffer_, LOG_T_F);
-		log_file_ << log_time_buffer_ << "socket failed with error : "
+		log_file_ << log_time_buffer_ << "ERROR socket failed with error : "
 			<< WSAGetLastError() << std::endl;
 
 		WSACleanup();
@@ -102,7 +102,7 @@ SmtpServer::SmtpServer(int buffer_size) :listen_socket_(INVALID_SOCKET), buffer_
 	if (buffer_ == NULL)
 	{
 		GetTimeStamp(log_time_buffer_, LOG_T_F);
-		log_file_ << log_time_buffer_ << "failed to new a " << buffer_
+		log_file_ << log_time_buffer_ << "ERROR failed to new a " << buffer_
 			<< "bytes buffer" << std::endl;
 
 		WSACleanup();
@@ -132,7 +132,7 @@ void SmtpServer::Listen(unsigned short listen_port)
 	if (bind(listen_socket_, (LPSOCKADDR)&sin, sizeof(sin)) == SOCKET_ERROR)
 	{
 		GetTimeStamp(log_time_buffer_, LOG_T_F);
-		log_file_ << log_time_buffer_ << "bind failed with error: "
+		log_file_ << log_time_buffer_ << "ERROR bind failed with error: "
 			<< WSAGetLastError() << std::endl;
 
 		closesocket(listen_socket_);
@@ -144,7 +144,7 @@ void SmtpServer::Listen(unsigned short listen_port)
 	if (listen(listen_socket_, SOMAXCONN) == SOCKET_ERROR)
 	{
 		GetTimeStamp(log_time_buffer_, LOG_T_F);
-		log_file_ << log_time_buffer_ << "listen failed with error: "
+		log_file_ << log_time_buffer_ << "ERROR listen failed with error: "
 			<< WSAGetLastError() << std::endl;
 
 		closesocket(listen_socket_);
@@ -153,10 +153,10 @@ void SmtpServer::Listen(unsigned short listen_port)
 	}
 
 	GetTimeStamp(log_time_buffer_, LOG_T_F);
-	log_file_<< log_time_buffer_<< "Server listenning on " << inet_ntoa(sin.sin_addr)
+	log_file_<< log_time_buffer_<< "INFO server listenning on " << inet_ntoa(sin.sin_addr)
 		<< ":" << ntohs(sin.sin_port) << "......" << std::endl;
 
-	std::cout << "Server listenning on " << inet_ntoa(sin.sin_addr)
+	std::cout << "INFO server listenning on " << inet_ntoa(sin.sin_addr)
 		<< ":" << ntohs(sin.sin_port) << "......" << std::endl;
 
 }
@@ -179,7 +179,7 @@ void SmtpServer::Start(CallBack callback, SmtpServer& svr)
 
 		if (session_socket_ == INVALID_SOCKET)
 		{
-			log_file_ << GetTimeStamp << "accept failed with error: "
+			log_file_ << GetTimeStamp << "WARRING accept failed with error: "
 				<< WSAGetLastError() << std::endl;
 
 			closesocket(listen_socket_);
@@ -187,9 +187,9 @@ void SmtpServer::Start(CallBack callback, SmtpServer& svr)
 			exit(5);
 		}
 
-		log_file_ << log_time_buffer_ << "accepted a connection from " << inet_ntoa(host_addr.sin_addr)
+		log_file_ << log_time_buffer_ << "INFO accepted a connection from " << inet_ntoa(host_addr.sin_addr)
 			<< ":" << ntohs(host_addr.sin_port) << std::endl;
-		std::cout << "accepted a connection from " << inet_ntoa(host_addr.sin_addr)
+		std::cout << "INFO accepted a connection from " << inet_ntoa(host_addr.sin_addr)
 			<< ":" << ntohs(host_addr.sin_port) << std::endl;
 
 
@@ -199,40 +199,49 @@ void SmtpServer::Start(CallBack callback, SmtpServer& svr)
 }
 
 
-void SmtpServer::SaveMailData()
+int SmtpServer::SaveMailData(char *mail_list)
 {
 	int data_len = 0;
 	int data_count = 0;
-	data_file_.open(".\\Data\\mail_data.txt", std::ios::ate);
+	data_file_.open(mail_list,std::ios::app);
 
 	while (true)
 	{
 		data_len = recv(session_socket_, buffer_, buffer_size_, 0);
+		if (data_len == 0)
+		{
+			GetTimeStamp(log_time_buffer_, LOG_T_F);
+			log_file_ << log_time_buffer_ << "WARRING disconnected from the client" << std::endl;
+			std::cout<< "WARRING disconnected from the client" << std::endl;
+
+			return 1;
+		}
 		data_count += data_len;
 		buffer_[data_len] = '\0';
 
 		GetTimeStamp(log_time_buffer_, LOG_T_F);
-		log_file_ << log_time_buffer_ << "receiving data........." << data_len <<std::endl;
-		std::cout << "receiving data........." << data_len << std::endl;
+		log_file_ << log_time_buffer_ << "INFO receiving data......... " << data_len <<" bytes"<<std::endl;
+		std::cout << "INFO receiving data......... " << data_len << " bytes" << std::endl;
 
 
 		//检查数据结束标志
 		if (strcmp(CHECK_DATA_END(buffer_, data_len), END_OF_DATA) == 0)
 		{
 			data_file_ << buffer_;
-			std::cout << "receive:  " << buffer_;
+			data_file_.close();
+			std::cout << "INFO receive:  " << buffer_;
 
 			GetTimeStamp(log_time_buffer_, LOG_T_F);
-			log_file_ << log_time_buffer_ << "finished  ....." << data_count << "bytes" << std::endl;
+			log_file_ << log_time_buffer_ << "INFO finished  ..... total: " << data_count << " bytes" << std::endl;
 
-			std::cout << "finished" << std::endl;
+			std::cout << "INFO finished  ..... total: " << data_count << " bytes" << std::endl;
 			break;
 		}
 		data_file_ << buffer_;
-		std::cout << "receive:  " << buffer_;
+		std::cout << "INFO receive:  " << buffer_;
 	}
 
-	return;
+	return 0;
 }
 
 
@@ -240,7 +249,6 @@ SmtpServer::~SmtpServer()
 {
 	delete[]buffer_;
 	log_file_.close();
-	data_file_.close();
 	closesocket(listen_socket_);
 	WSACleanup();
 }

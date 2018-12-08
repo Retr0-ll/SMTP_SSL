@@ -71,7 +71,7 @@
 /********
 * 获取指定格式的时间戳
 * char *output_time 输出参数：带回指定格式的字符串形式时间戳
-* const char *format
+* const char *format 样式
 ********/
 void GetTimeStamp(char *output_time, const char *format);
 
@@ -130,7 +130,7 @@ public:
 	void Start(CallBack callback, SmtpServer& svr );
 
 	/*该函数在回调函数中调用，在收到DATA命令后，储存邮件至文件中*/
-	void SaveMailData();
+	int SaveMailData(char *mailer);
 
 	/***********
      * SmtpServer类重载了 << 和 >>两个运算符，重新定义了两个运算符的行为

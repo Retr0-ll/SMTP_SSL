@@ -23,6 +23,7 @@ int main()
 
 void ServerLogic(SmtpServer &svr)
 {
+	int len;
 	//connection established ------- 220
 	svr << RB220;
 
@@ -31,20 +32,34 @@ void ServerLogic(SmtpServer &svr)
 	svr << RB250;
 
 	//MAIL FROM ------- 250
-	svr >> svr.buffer_;
+	len = svr >> svr.buffer_;
 	svr << RB250;
 
+	char mail_list[50] = ".\\Data\\";
+	char mailer[50];
+	svr.buffer_[len - 3] = '\0';
+	strcpy_s(mailer, GET_PARA(svr.buffer_, MF) + 1);
+
+	strcat_s(mail_list, GET_PARA(svr.buffer_,MF)+1);
+	strcat_s(mail_list, ".txt");
+
 	//RCPT TO ------ 250
-	svr >> svr.buffer_;
+	len = svr >> svr.buffer_;
 	svr << RB250;
+
+	char receiver[50];
+	svr.buffer_[len - 3] = '\0';
+	strcpy_s(receiver, GET_PARA(svr.buffer_, RT));
 
 	//DATA -------- 354
 	svr >> svr.buffer_;
 	svr << RB354;
 
+
 	//SAVE MAIL DATA
-	svr.SaveMailData();
+	svr.SaveMailData(mail_list);
 	svr << RB250;
+
 
 	//QUIT --Bye
 	svr >> svr.buffer_;

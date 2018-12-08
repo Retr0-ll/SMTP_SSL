@@ -2,6 +2,9 @@
 .vs/
 Debug/
 x64/
-Log/
+Log/*
+!Log/folder_for_log_file
+Data/*
+!Data/folder_for_mail_list
 
 *vcxproj.user
