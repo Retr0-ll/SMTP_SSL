@@ -1,20 +1,25 @@
 #pragma once
 
+
 #ifndef _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #endif
+
 
 #ifndef _WINSOCK2API_
 #include <WinSock2.h>
 #endif
 
+
 #ifndef _SMTP_
 #define SMTP
 #endif
 
+
 #ifndef _FSTREAM_
 #include <fstream>
 #endif
+
 
 /*
 * LOG_FN_F 定义了服务器Log文件的目录以及命名样式
@@ -24,6 +29,7 @@
 #define LOG_FN_F ".\\Log\\Log-%Y%m%d%H%M%S.txt"
 #define LOG_T_F "%m-%d-%H:%M:%S ----- "
 #define LOG_T_MAXLEN 30
+
 
 /*
 * RB[三位回复码] 定义了服务器的响应列表
@@ -37,15 +43,17 @@
 #define RB354 "354 End data with <CR><LF>.<CR><LF>\r\n"
 #define RB221 "221 Bye\r\n"
 
+
 /*
 * 定义客户端的的命令列表
 */
-#define EHLO "EHLO "
+#define EHLO "EHLO SimpleSmtp\r\n"
 #define MF "MAIL FROM: "
 #define RT "RCPT TO: "
 #define DATA "DATA"
 #define QT "QUIT"
 #define END_OF_DATA "\r\n.\r\n"
+
 
 /*
 * 宏函数 CHECK_DATA_END 返回 邮件数据结束检测点的地址
@@ -64,14 +72,6 @@
 #define GET_PARA(buffer, cmd) (buffer+strlen(cmd))
 
 
-
-
-
-
-
-
-
-
 /********
 * 获取指定格式的时间戳
 * char *output_time 输出参数：带回指定格式的字符串形式时间戳
@@ -83,27 +83,25 @@ void LoadSocket(int major_version, int minor_version);
 
 
 
-
-
-
-
-
-
-
-
 class SmtpServer
 {
 private:
-	/*服务器地址、端口、会话套接字、服务器监听套接字*/
+	/*服务器地址、端口、服务器监听套接字、当前会话套接字*/
 	const char *listen_addr_;
 	unsigned short listen_port_;
 	SOCKET listen_socket_;
 	SOCKET session_socket_;
+
+	/*远程主机的socket、和远程主机的地址和端口*/
+	const char *remote_addr_;
+	unsigned short remote_port_;
+
+
 public:
 	/*********
 	*回调函数类型定义
 	**********/
-	typedef void(*CallBack)(SmtpServer &);
+	typedef int(*CallBack)(SmtpServer &);
 
 	/*服务器接收缓冲*/
 	char* buffer_;
@@ -126,15 +124,18 @@ public:
 	SmtpServer(int buffer_size);
 	~SmtpServer();
 
+
 	/***********
 	 *Listen 传入监听端口 绑定地址(默认127.0.0.1)和端口并开始监听
 	 *Start  启动服务器并开始接收连接 
 	***********/
 	void Listen(unsigned short listen_port);
-	void Start(CallBack callback, SmtpServer& svr );
+	void Start(CallBack server_logic, CallBack client_logic, SmtpServer& svr);
+
 
 	/*该函数在回调函数中调用，在收到DATA命令后，储存邮件至文件中*/
 	int SaveMailData(char *mailer);
+
 
 	/***********
      * SmtpServer类重载了 << 和 >>两个运算符，重新定义了两个运算符的行为
@@ -150,5 +151,8 @@ public:
 	***********/
 	friend SmtpServer& operator<<(SmtpServer& server, const char *data_send);
 	friend int operator>>(SmtpServer& server, char *data_receive);
-public:
+
+private:
+	/*连接默认的远程SMTP服务器*/
+	int ConnectRemote();
 };

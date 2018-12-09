@@ -54,8 +54,8 @@ SmtpServer& operator<<(SmtpServer& server, const char *data_send)
 
 	//记录日志，输出到标准输出
 	GetTimeStamp(server.log_time_buffer_, LOG_T_F);
-	server.log_file_ << server.log_time_buffer_ << "INFO reply:  " << data_send;
-	std::cout << "INFO reply:  " << data_send;
+	server.log_file_ << server.log_time_buffer_ << "INFO send:  " << data_send;
+	std::cout << "INFO send:  " << data_send;
 
 	return server;
 }
@@ -120,17 +120,17 @@ void SmtpServer::Listen(unsigned short listen_port)
 	listen_port_ = listen_port;
 
 	//服务器端口地址初始化
-	sockaddr_in sin;
-	memset(&sin, 0, sizeof(sin));
+	sockaddr_in svr_adr;
+	memset(&svr_adr, 0, sizeof(svr_adr));
 	
 	//地址族 ipv4 
-	sin.sin_family = AF_INET;
-	sin.sin_port = htons(listen_port_);
-	sin.sin_addr.S_un.S_addr = inet_addr(listen_addr_);
+	svr_adr.sin_family = AF_INET;
+	svr_adr.sin_port = htons(listen_port_);
+	svr_adr.sin_addr.S_un.S_addr = inet_addr(listen_addr_);
 
 
 	//绑定端口和地址
-	if (bind(listen_socket_, (LPSOCKADDR)&sin, sizeof(sin)) == SOCKET_ERROR)
+	if (bind(listen_socket_, (LPSOCKADDR)&svr_adr, sizeof(svr_adr)) == SOCKET_ERROR)
 	{
 		GetTimeStamp(log_time_buffer_, LOG_T_F);
 		log_file_ << log_time_buffer_ << "ERROR bind failed with error: "
@@ -154,16 +154,16 @@ void SmtpServer::Listen(unsigned short listen_port)
 	}
 
 	GetTimeStamp(log_time_buffer_, LOG_T_F);
-	log_file_<< log_time_buffer_<< "INFO server listenning on " << inet_ntoa(sin.sin_addr)
-		<< ":" << ntohs(sin.sin_port) << "......" << std::endl;
+	log_file_<< log_time_buffer_<< "INFO server listenning on " << listen_addr_
+		<< ":" << listen_port_ << "......" << std::endl;
 
-	std::cout << "INFO server listenning on " << inet_ntoa(sin.sin_addr)
-		<< ":" << ntohs(sin.sin_port) << "......" << std::endl;
+	std::cout << "INFO server listenning on " << listen_addr_
+		<< ":" << listen_port_ << "......" << std::endl;
 
 }
 
 
-void SmtpServer::Start(CallBack callback, SmtpServer& svr)
+void SmtpServer::Start(CallBack server_logic, CallBack client_logic, SmtpServer& svr)
 {
 	//客户端地址初始化
 	sockaddr_in host_addr;
@@ -180,12 +180,10 @@ void SmtpServer::Start(CallBack callback, SmtpServer& svr)
 
 		if (session_socket_ == INVALID_SOCKET)
 		{
-			log_file_ << GetTimeStamp << "WARRING accept failed with error: "
+			log_file_ << GetTimeStamp << "WARNING accept failed with error: "
 				<< WSAGetLastError() << std::endl;
 
-			closesocket(listen_socket_);
-			WSACleanup();
-			exit(5);
+			continue;
 		}
 
 		log_file_ << log_time_buffer_ << "INFO accepted a connection from " << inet_ntoa(host_addr.sin_addr)
@@ -194,8 +192,38 @@ void SmtpServer::Start(CallBack callback, SmtpServer& svr)
 			<< ":" << ntohs(host_addr.sin_port) << std::endl;
 
 
-		//然后调用回调函数开始 SMTP逻辑
-		callback(svr);
+		//然后调用回调函数开始SMTP SERVER逻辑
+		if (server_logic(svr) == 0)
+		{
+			closesocket(session_socket_);
+			log_file_ << log_time_buffer_ << "INFO mail receive succeed" << std::endl;
+			std::cout << "INFO mail receive success" << std::endl;
+			//连接远程服务器 开始SMTP Client逻辑
+			if (ConnectRemote() == 0)
+			{
+				if (client_logic(svr) == 0)
+				{
+					closesocket(session_socket_);
+					log_file_ << log_time_buffer_ << "INFO mail send succeed" << std::endl;
+					std::cout << "INFO mail send succeed" << std::endl;
+				}
+				else
+				{
+					closesocket(session_socket_);
+					log_file_ << log_time_buffer_ << "WARNING mail send succeed" << std::endl;
+					std::cout << "INFO mail send succeed" << std::endl;
+				}
+			}
+			closesocket(session_socket_);
+		}
+		else
+		{
+			closesocket(session_socket_);
+
+			GetTimeStamp(log_time_buffer_, LOG_T_F);
+			log_file_ << log_time_buffer_ << "WARNING mail receive failed" << std::endl;
+			std::cout << "WARNING mail receive failed" << std::endl;
+		}
 	}
 }
 
@@ -245,6 +273,62 @@ int SmtpServer::SaveMailData(char *mail_list)
 	return 0;
 }
 
+int SmtpServer::ConnectRemote()
+{
+	session_socket_ = INVALID_SOCKET;
+	remote_addr_ = "220.181.12.17";
+	remote_port_ = 25;
+
+	session_socket_ = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (session_socket_ == INVALID_SOCKET)
+	{
+		GetTimeStamp(log_time_buffer_, LOG_T_F);
+		log_file_ << log_time_buffer_ << "ERROR session socket failed with error : "
+			<< WSAGetLastError() << std::endl;
+
+		WSACleanup();
+		exit(2);
+	}
+
+	//初始化远程地址
+	sockaddr_in remote_adr;
+	memset(&remote_adr, 0, sizeof(remote_adr));
+
+	remote_adr.sin_family = AF_INET;
+	remote_adr.sin_port = htons(remote_port_);
+	remote_adr.sin_addr.S_un.S_addr = inet_addr(remote_addr_);
+
+	//连接远程SMTP服务器
+	if (connect(session_socket_, (LPSOCKADDR)&remote_adr, sizeof(remote_adr)) == SOCKET_ERROR)
+	{
+		GetTimeStamp(log_time_buffer_, LOG_T_F);
+		log_file_ << log_time_buffer_ << "ERROR connect failed with error: "
+			<< WSAGetLastError() << std::endl;
+
+		closesocket(listen_socket_);
+		closesocket(session_socket_);
+		WSACleanup();
+		exit(3);
+	}
+	if (session_socket_ == INVALID_SOCKET)
+	{
+		GetTimeStamp(log_time_buffer_, LOG_T_F);
+		log_file_ << log_time_buffer_ << "WARNING unable to connect to the remote: " << std::endl;
+
+		return 1;
+	}
+
+	//连接成功
+	GetTimeStamp(log_time_buffer_, LOG_T_F);
+	log_file_ << log_time_buffer_ << "INFO server connected to " << remote_addr_
+		<< ":" << remote_port_ << "......" << std::endl;
+
+	std::cout << "INFO server connected to " << remote_addr_
+		<< ":" << remote_port_ << "......" << std::endl;
+
+	return 0;
+
+}
 
 SmtpServer::~SmtpServer()
 {

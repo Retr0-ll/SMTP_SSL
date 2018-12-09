@@ -8,21 +8,23 @@
 
 #define BUFFER_SIZE 1024*10 //×Ö½Ú
 
-void ServerLogic(SmtpServer &svr);
+int ServerLogic(SmtpServer &svr);
 
-
+int ClientLogic(SmtpServer &svr);
 int main()
 {
 	LoadSocket(2, 2);
 
 	SmtpServer svr(BUFFER_SIZE);
 	svr.Listen(25);
-	svr.Start(&ServerLogic, svr);
+	svr.Start(&ServerLogic,&ClientLogic,svr);
 	return 0;
 }
 
-void ServerLogic(SmtpServer &svr)
+int ServerLogic(SmtpServer &svr)
 {
+	return 0;
+
 	int len;
 	//connection established ------- 220
 	svr << RB220;
@@ -77,4 +79,13 @@ void ServerLogic(SmtpServer &svr)
 	svr >> svr.buffer_;
 	svr << RB221;
 
+}
+
+int ClientLogic(SmtpServer &svr)
+{
+	svr >> svr.buffer_;
+	svr << EHLO;
+	svr >> svr.buffer_;
+
+	return 0;
 }
