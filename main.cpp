@@ -6,9 +6,6 @@
 #include <iostream>
 #endif
 
-#ifndef _REGEX_
-#include<regex>
-#endif
 
 #define BUFFER_SIZE 1024*10 //字节
 
@@ -16,12 +13,16 @@ int ServerLogic(SmtpServer &svr);
 
 int ClientLogic(SmtpServer &svr);
 
-char user_name[50];
-char passwd[50];
-char mailer[50];
+char user_name[100];
+char passwd[100];
+
+char mailer[100];
+char mail_list[100] = ".\\Data\\";
 char receiver[30][50];
+int rcv_num;
 
 int CheckCmd(SmtpServer&svr, const char* cmd,int cmd_len);
+int CheckFormat();
 
 int main()
 {
@@ -40,68 +41,106 @@ int ServerLogic(SmtpServer &svr)
 	svr.state_ = 0;
 	svr.exstate_ = 0;
 
+	int len = 0;
+
 	//开始处理客户端命令
-	for (svr >> svr.buffer_; svr.state_ != 11; svr >> svr.buffer_)
+	for (svr >> svr.buffer_,rcv_num=0; svr.state_ != -2;)
 	{
+
 		switch (svr.state_)
 		{
-		case-1://Invalid Command ---- 500 
-			svr << RB500;
-			svr.state_ = svr.exstate_;
-			break;
-
 		case 0://EHLO------250 extention surported
-			if (CheckCmd(svr, EHLO, EHLO_L) == 0)
+			if (CheckCmd(svr, EHLO_C, EHLO_L) == 0)
 			{
 				svr << RB250_EXT;
 				svr.state_ = 1;
+				break;
 			}
-			break;
-		case 1://Auth login ---- 334 recive Username and passwd
-			   //           ---- 235 Authentication successful
+
+		case 1://Auth login ---- 334 recive Username and passwd	---- 235 Authentication successful
 			if (CheckCmd(svr, AL, AL_L) == 0)
 			{
 				svr << RB334_USER;
-				svr >> svr.buffer_;
+				//保存用户名
+				len = svr >> svr.buffer_;
+				memcpy_s(user_name, 100, svr.buffer_, len + 1);
+
 				svr << RB334_PASS;
-				svr >> svr.buffer_;
+				//保存密码
+				len = svr >> svr.buffer_;
+				memcpy_s(passwd, 100, svr.buffer_, len + 1);
 				svr << RB235;
 
 				svr.state_ = 2;
+				break;
 			}
-			break;
+
 		case 2://Mail From ------ 250 OK
-			if (CheckCmd(svr, MF, MF_L) == 0)
+			if (CheckCmd(svr, MF_C, MF_L) == 0)
 			{
+				//保存Mail From 构造用户对应的邮件列表名称
+				memcpy_s(mailer, 100, svr.buffer_, len + 1);
+				memcpy_s(mail_list+7, 100, GET_PARA(svr.buffer_, MF_C) + 1, len - MF_L -4 );
+				(mail_list+7)[len - MF_L - 4] = '\0';
+				strcat_s(mail_list, ".txt");
+
 				svr << RB250;
 				svr.state_ = 3;
+
+				break;
 			}
-			break;
+
 		case 3://RCPT TO ------- 250 OK
-			if (CheckCmd(svr, RT, RT_L) == 0)
+			if (CheckCmd(svr, RT_C, RT_L) == 0)
 			{
+				//保存RCPT TO
+				memcpy_s(receiver[rcv_num], 100, svr.buffer_, len + 1);
+				rcv_num++;
+
 				svr << RB250;
 				svr.state_ = 4;
+
+				break;
 			}
-			break;
+
 		case 4:// DATA --------- 354 Ready
+			//判断是否继续是RCPT 如果是 则继续回到case 3
+			if (CheckCmd(svr, RT_C, RT_L) == 0)
+			{
+				svr.state_ = 3;
+				continue;
+			}
 			if (CheckCmd(svr, DATA, DATA_L) == 0)
 			{
 				svr << RB354;
-				svr.SaveMailData();
-				svr.state_ = 5;
+				if (svr.SaveMailData(mail_list) == 0)
+				{
+					svr << RB250;
+					svr.exstate_ = 4;
+					svr.state_ = 5;
+					break;
+				}
 			}
-			break;
+
 		case 5://QUIT ---------- 221 Bye
-			if (CheckCmd(svr, QT, QT_L) == 0)
+			svr << RB221;
+			if (svr.exstate_ == 4)
 			{
-				svr << RB221;
 				return 0;
 			}
+			else
+			{
+				return 1;
+			}
+
+		case -1://Invalid Command ---- 500 
+			svr << RB500;
+			svr.state_ = svr.exstate_;
+			break;
 		}
+
+		len = svr >> svr.buffer_;
 	}
-		
-	return 0;
 }
 
 int CheckCmd(SmtpServer&svr, const char* state_cmd, int cmd_len)
@@ -118,8 +157,10 @@ int CheckCmd(SmtpServer&svr, const char* state_cmd, int cmd_len)
 		/*判断是否为QUIT*/
 		if (strcmp(svr.buffer_, QT) == 0)
 		{
-			svr.state_ = 11;
+			svr.state_ = 5;
+			return 1;
 		}
+
 		svr.exstate_ = svr.state_;
 		svr.state_ = -1;
 		return 1;
@@ -129,12 +170,46 @@ int CheckCmd(SmtpServer&svr, const char* state_cmd, int cmd_len)
 	return 0;
 }
 
+int CheckFormat()
+{
+
+}
+
 int ClientLogic(SmtpServer &svr)
 {
 	svr >> svr.buffer_;
+
 	svr << EHLO;
 	svr >> svr.buffer_;
 
+	svr << AL;
+	svr >> svr.buffer_;
+
+	svr << user_name;
+	svr >> svr.buffer_;
+
+	svr << passwd;
+	svr >> svr.buffer_;
+
+	svr << mailer;
+	svr >> svr.buffer_;
+
+	for (int i = 0; i < rcv_num; i++)
+	{
+		svr << receiver[i];
+		svr >> svr.buffer_;
+	}
+
+	svr << DATA;
+	svr >> svr.buffer_;
+
+	svr.ReadMailData(mail_list);
+	svr << svr.buffer_;
+	svr >> svr.buffer_;
+
+	svr << QT;
+	svr >> svr.buffer_;
+
+
 	return 0;
 }
-

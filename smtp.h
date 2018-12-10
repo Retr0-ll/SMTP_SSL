@@ -28,7 +28,7 @@
 */
 #define LOG_FN_F ".\\Log\\Log-%Y%m%d%H%M%S.txt"
 #define LOG_T_F "%m-%d-%H:%M:%S ----- "
-#define LOG_T_MAXLEN 30
+#define LOG_T_MAXLEN 50
 
 
 /*
@@ -49,19 +49,21 @@
 * 定义客户端的的命令列表 以及命令长度
 */
 #define EHLO "EHLO SimpleSmtp\r\n"
+#define EHLO_C "EHLO"
 #define EHLO_L 4
+
 #define AL "AUTH LOGIN\r\n"
-#define AL_L 10
-#define MF "MAIL FROM: "
+#define AL_L 12
+#define MF_C "MAIL FROM: "
 #define MF_L 11
-#define RT "RCPT TO: "
+#define RT_C "RCPT TO: "
 #define RT_L 9
 #define DATA "DATA\r\n"
-#define DATA_L 4
+#define DATA_L 6
 #define QT "QUIT\r\n"
-#define QT_L 4
-#define RT "RSET\r\n"
-#define RT_L 4
+#define QT_L 6
+#define RS "RSET\r\n"
+#define RS_L 6
 
 #define END_OF_DATA "\r\n.\r\n"
 

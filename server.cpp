@@ -46,7 +46,6 @@ void LoadSocket(int major_version, int minor_version)
 }
 
 
-
 SmtpServer& operator<<(SmtpServer& server, const char *data_send)
 {
 	//·¢ËÍÊý¾Ý
