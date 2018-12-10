@@ -48,10 +48,14 @@
 * 定义客户端的的命令列表
 */
 #define EHLO "EHLO SimpleSmtp\r\n"
+#define AL "AUTH LOGIN\r\n"
+#define UN "User: "
+#define PS "Pass: "
 #define MF "MAIL FROM: "
 #define RT "RCPT TO: "
-#define DATA "DATA"
-#define QT "QUIT"
+#define DATA "DATA\r\n"
+#define QT "QUIT\r\n"
+#define RT "RSET\r\n"
 #define END_OF_DATA "\r\n.\r\n"
 
 
