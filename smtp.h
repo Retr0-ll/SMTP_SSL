@@ -42,20 +42,27 @@
 #define RB250 "250 OK\r\n"
 #define RB354 "354 End data with <CR><LF>.<CR><LF>\r\n"
 #define RB221 "221 Bye\r\n"
+#define RB500 "500 Command Error\r\n"
 
 
 /*
-* 定义客户端的的命令列表
+* 定义客户端的的命令列表 以及命令长度
 */
 #define EHLO "EHLO SimpleSmtp\r\n"
+#define EHLO_L 4
 #define AL "AUTH LOGIN\r\n"
-#define UN "User: "
-#define PS "Pass: "
+#define AL_L 10
 #define MF "MAIL FROM: "
+#define MF_L 11
 #define RT "RCPT TO: "
+#define RT_L 9
 #define DATA "DATA\r\n"
+#define DATA_L 4
 #define QT "QUIT\r\n"
+#define QT_L 4
 #define RT "RSET\r\n"
+#define RT_L 4
+
 #define END_OF_DATA "\r\n.\r\n"
 
 
@@ -110,6 +117,9 @@ public:
 	/*服务器接收缓冲*/
 	char* buffer_;
 
+	/*服务器SMTP通信状态 用于回调函数中处理逻辑的设计*/
+	int state_;
+	int exstate_;
 
 private:
 	/*缓冲大小*/
@@ -123,7 +133,7 @@ private:
 public:
 	/***********
 	*构造函数打开Log文件、初始化服务器监听套接字、申请服务器缓冲
-	*析构函数释放SOCKET资源、释放服务器缓冲、关闭邮件数据文件、关闭Log文件
+	*析构函数释放SOCKET资源、释放服务器缓冲、关闭Log文件
 	***********/
 	SmtpServer(int buffer_size);
 	~SmtpServer();
@@ -131,7 +141,7 @@ public:
 
 	/***********
 	 *Listen 传入监听端口 绑定地址(默认127.0.0.1)和端口并开始监听
-	 *Start  启动服务器并开始接收连接 
+	 *Start  启动服务器并开始接收连接，并调用回调函数处理连接
 	***********/
 	void Listen(unsigned short listen_port);
 	void Start(CallBack server_logic, CallBack client_logic, SmtpServer& svr);
