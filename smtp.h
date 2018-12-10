@@ -96,7 +96,7 @@ private:
 	SOCKET listen_socket_;
 	SOCKET session_socket_;
 
-	/*远程主机的socket、和远程主机的地址和端口*/
+	/*远程主机的地址和端口*/
 	const char *remote_addr_;
 	unsigned short remote_port_;
 
@@ -117,7 +117,7 @@ private:
 
 	/*服务器日志 邮件数据文件 时间戳缓冲*/
 	std::ofstream log_file_;
-	std::ofstream data_file_;
+	std::fstream data_file_;
 	char log_time_buffer_[LOG_T_MAXLEN];
 
 public:
@@ -137,9 +137,10 @@ public:
 	void Start(CallBack server_logic, CallBack client_logic, SmtpServer& svr);
 
 
-	/*该函数在回调函数中调用，在收到DATA命令后，储存邮件至文件中*/
-	int SaveMailData(char *mailer);
-
+	/*该函数在Server回调函数中调用，在收到DATA命令后，储存邮件至文件中*/
+	int SaveMailData(char *mail_list);
+	/*该函数在Client回调函数中调用，发送邮件列表的最后一封邮件*/
+	int ReadMailData(char *mail_list);
 
 	/***********
      * SmtpServer类重载了 << 和 >>两个运算符，重新定义了两个运算符的行为
@@ -157,6 +158,6 @@ public:
 	friend int operator>>(SmtpServer& server, char *data_receive);
 
 private:
-	/*连接默认的远程SMTP服务器*/
+	/*连接默认的远程SMTP服务器 在Client回调之前执行 */
 	int ConnectRemote();
 };

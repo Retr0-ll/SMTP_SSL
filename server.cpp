@@ -198,7 +198,7 @@ void SmtpServer::Start(CallBack server_logic, CallBack client_logic, SmtpServer&
 			closesocket(session_socket_);
 			log_file_ << log_time_buffer_ << "INFO mail receive succeed" << std::endl;
 			std::cout << "INFO mail receive success" << std::endl;
-			//连接远程服务器 开始SMTP Client逻辑
+			//连接远程服务器  调用回调函数 开始SMTP Client逻辑
 			if (ConnectRemote() == 0)
 			{
 				if (client_logic(svr) == 0)
@@ -227,17 +227,23 @@ void SmtpServer::Start(CallBack server_logic, CallBack client_logic, SmtpServer&
 	}
 }
 
-
 int SmtpServer::SaveMailData(char *mail_list)
 {
 	int data_len = 0;
 	int data_count = 0;
 	data_file_.open(mail_list,std::ios::app);
+	data_file_ << END_OF_DATA;
+
+	//标记邮件起点
+	data_file_.width(8);
+	data_file_ << 0 << std::endl;
 
 	while (true)
 	{
 		data_len = recv(session_socket_, buffer_, buffer_size_, 0);
-		if (data_len == 0)
+
+		//如果意外断开连接
+		if (data_len == -1)
 		{
 			GetTimeStamp(log_time_buffer_, LOG_T_F);
 			log_file_ << log_time_buffer_ << "WARRING disconnected from the client" << std::endl;
@@ -251,14 +257,19 @@ int SmtpServer::SaveMailData(char *mail_list)
 		GetTimeStamp(log_time_buffer_, LOG_T_F);
 		log_file_ << log_time_buffer_ << "INFO receiving data......... " << data_len <<" bytes"<<std::endl;
 		std::cout << "INFO receiving data......... " << data_len << " bytes" << std::endl;
-
+		
+		//写入文件
+		data_file_ << buffer_;
+		std::cout << "INFO receive:  " << buffer_;
 
 		//检查数据结束标志
 		if (strcmp(CHECK_DATA_END(buffer_, data_len), END_OF_DATA) == 0)
 		{
-			data_file_ << buffer_;
+			//标记邮件结束点
+			data_file_.width(8);
+			data_file_ << data_len << std::endl;
 			data_file_.close();
-			std::cout << "INFO receive:  " << buffer_;
+			
 
 			GetTimeStamp(log_time_buffer_, LOG_T_F);
 			log_file_ << log_time_buffer_ << "INFO finished  ..... total: " << data_count << " bytes" << std::endl;
@@ -266,10 +277,41 @@ int SmtpServer::SaveMailData(char *mail_list)
 			std::cout << "INFO finished  ..... total: " << data_count << " bytes" << std::endl;
 			break;
 		}
-		data_file_ << buffer_;
-		std::cout << "INFO receive:  " << buffer_;
 	}
 
+	return 0;
+}
+
+int SmtpServer::ReadMailData(char *mail_list)
+{
+	int mail_size;
+	int offset;
+	data_file_.open(mail_list, std::ios::in);
+
+	//获取邮件大小
+	data_file_.seekg(-10, std::ios::end);
+	data_file_ >> mail_size;
+
+	//定位到邮件起点
+	char cmp[6];
+	cmp[5] = '\0';
+	for (offset = -mail_size;; offset--)
+	{
+		data_file_.seekg(offset, std::ios::end);
+		data_file_.read(cmp, 5);
+		if (strcmp(cmp, END_OF_DATA) == 0)
+		{
+			offset += 17;
+			break;
+		}
+	}
+
+	//读取邮件内容
+	data_file_.seekg(offset, std::ios::end);
+	data_file_.read(buffer_, mail_size);
+	buffer_[mail_size] = '\0';
+
+	data_file_.close();
 	return 0;
 }
 
