@@ -11,6 +11,7 @@
 int ServerLogic(SmtpServer &svr);
 
 int ClientLogic(SmtpServer &svr);
+
 int main()
 {
 	LoadSocket(2, 2);
@@ -23,7 +24,6 @@ int main()
 
 int ServerLogic(SmtpServer &svr)
 {
-	return 0;
 
 	int len;
 	//connection established ------- 220
@@ -73,11 +73,14 @@ int ServerLogic(SmtpServer &svr)
 	//SAVE MAIL DATA
 	svr.SaveMailData(mail_list);
 	svr << RB250;
-
+	svr.ReadMailData(mail_list);
+	std::cout << svr.buffer_;
 
 	//QUIT --Bye
 	svr >> svr.buffer_;
 	svr << RB221;
+
+	return 1;
 
 }
 
