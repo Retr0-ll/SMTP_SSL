@@ -6,6 +6,9 @@
 #include <iostream>
 #endif
 
+#ifndef _REGEX_
+#include<regex>
+#endif
 
 #define BUFFER_SIZE 1024*10 //字节
 
@@ -21,8 +24,10 @@ char mail_list[100] = ".\\Data\\";
 char receiver[30][50];
 int rcv_num;
 
+//邮件地址正则匹配格式
+std::regex mail_format("<([0-9A-Za-z\\-_\\.]+)@([0-9a-z]+\\.[a-z]{2,3}(\\.[a-z]{2})?)>\r\n");
+
 int CheckCmd(SmtpServer&svr, const char* cmd,int cmd_len);
-int CheckFormat();
 
 int main()
 {
@@ -78,10 +83,17 @@ int ServerLogic(SmtpServer &svr)
 		case 2://Mail From ------ 250 OK
 			if (CheckCmd(svr, MF_C, MF_L) == 0)
 			{
+				//检查邮件地址格式
+				if (!std::regex_match(GET_PARA(svr.buffer_, MF_C), mail_format))
+				{
+					svr << RB550;
+					break;
+				}
+
 				//保存Mail From 构造用户对应的邮件列表名称
 				memcpy_s(mailer, 100, svr.buffer_, len + 1);
-				memcpy_s(mail_list+7, 100, GET_PARA(svr.buffer_, MF_C) + 1, len - MF_L -4 );
-				(mail_list+7)[len - MF_L - 4] = '\0';
+				memcpy_s(mail_list+7, 100, GET_PARA(svr.buffer_, MF_C) + 1, len - strlen(MF_C) -4 );
+				(mail_list+7)[len - strlen(MF_C) - 4] = '\0';
 				strcat_s(mail_list, ".txt");
 
 				svr << RB250;
@@ -93,6 +105,13 @@ int ServerLogic(SmtpServer &svr)
 		case 3://RCPT TO ------- 250 OK
 			if (CheckCmd(svr, RT_C, RT_L) == 0)
 			{
+				//检查邮件地址格式
+				if (!std::regex_match(GET_PARA(svr.buffer_, RT_C), mail_format))
+				{
+					svr << RB550;
+					break;
+				}
+
 				//保存RCPT TO
 				memcpy_s(receiver[rcv_num], 100, svr.buffer_, len + 1);
 				rcv_num++;
@@ -123,6 +142,10 @@ int ServerLogic(SmtpServer &svr)
 			}
 
 		case 5://QUIT ---------- 221 Bye
+			if (CheckCmd(svr, QT, QT_L) != 0)
+			{
+				break;
+			}
 			svr << RB221;
 			if (svr.exstate_ == 4)
 			{
@@ -168,11 +191,6 @@ int CheckCmd(SmtpServer&svr, const char* state_cmd, int cmd_len)
 
 	/*命令合法*/
 	return 0;
-}
-
-int CheckFormat()
-{
-
 }
 
 int ClientLogic(SmtpServer &svr)

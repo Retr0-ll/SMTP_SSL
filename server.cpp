@@ -16,7 +16,6 @@
 
 #pragma comment (lib,"Ws2_32.lib")
 
-
 void GetTimeStamp(char *output, const char * format)
 {
 	time_t now_time;
@@ -226,6 +225,7 @@ void SmtpServer::Start(CallBack server_logic, CallBack client_logic, SmtpServer&
 	}
 }
 
+
 int SmtpServer::SaveMailData(char *mail_list)
 {
 	int data_len = 0;
@@ -281,6 +281,7 @@ int SmtpServer::SaveMailData(char *mail_list)
 	return 0;
 }
 
+
 int SmtpServer::ReadMailData(char *mail_list)
 {
 	int mail_size;
@@ -313,6 +314,7 @@ int SmtpServer::ReadMailData(char *mail_list)
 	data_file_.close();
 	return 0;
 }
+
 
 int SmtpServer::ConnectRemote()
 {
@@ -370,6 +372,7 @@ int SmtpServer::ConnectRemote()
 	return 0;
 
 }
+
 
 SmtpServer::~SmtpServer()
 {

@@ -42,11 +42,13 @@
 #define RB250 "250 OK\r\n"
 #define RB354 "354 End data with <CR><LF>.<CR><LF>\r\n"
 #define RB221 "221 Bye\r\n"
+
 #define RB500 "500 Command Error\r\n"
+#define RB550 "550 MI:IMF\r\n"
 
 
 /*
-* 定义客户端的的命令列表 以及命令长度
+* 定义客户端的命令列表，检查字段，检查长度
 */
 #define EHLO "EHLO SimpleSmtp\r\n"
 #define EHLO_C "EHLO"
@@ -66,6 +68,7 @@
 #define RS_L 6
 
 #define END_OF_DATA "\r\n.\r\n"
+#define END_OF_DATA_L 5
 
 
 /*
@@ -74,7 +77,7 @@
 * data_len：数据块的长度
 * cmd 需要检测的命令
 */
-#define CHECK_DATA_END(buffer, data_len) (buffer+data_len-strlen(END_OF_DATA))
+#define CHECK_DATA_END(buffer, data_len) (buffer+data_len-END_OF_DATA_L)
 
 
 /*
